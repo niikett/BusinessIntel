@@ -1,8 +1,3 @@
-"""
-Instagram Profile Analyzer
-A Python-based tool to analyze Instagram profiles and identify growth opportunities
-"""
-
 import instaloader
 from datetime import datetime, timedelta
 import statistics
