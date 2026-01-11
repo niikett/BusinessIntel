@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Text,
     JSON,
+    desc,
     func,
 )
 
@@ -232,6 +233,48 @@ class DatabaseManager:
         return True
 
     # ---------- Stats ----------
+
+    def get_profile_history(
+        self, username: str, limit: int = 10
+    ) -> List[AnalysisHistory]:
+        """
+        Return historical analysis records for a username
+        """
+        return (
+            self.session.query(AnalysisHistory)
+            .filter(AnalysisHistory.username == username)
+            .order_by(desc(AnalysisHistory.analyzed_at))
+            .limit(limit)
+            .all()
+        )
+
+
+    def mark_contacted(
+        self, username: str, notes: Optional[str] = None
+    ) -> bool:
+        """
+        Mark the latest analysis of a profile as contacted
+        """
+        analysis = (
+            self.session.query(AnalysisHistory)
+            .filter(AnalysisHistory.username == username)
+            .order_by(AnalysisHistory.analyzed_at.desc())
+            .first()
+        )
+
+        if not analysis:
+            return False
+
+        analysis.contacted = True
+        analysis.contacted_date = datetime.utcnow()
+
+        if notes:
+            analysis.notes = notes
+
+        self.session.commit()
+        return True
+
+
 
     def get_stats(self) -> Dict[str, Any]:
         return {

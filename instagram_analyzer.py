@@ -8,15 +8,28 @@ from datetime import datetime, timedelta
 import statistics
 from typing import Dict, List, Optional
 import json
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+IG_USERNAME = os.getenv("IG_USERNAME")
 
 class InstagramAnalyzer:
-    """Analyze Instagram profiles to identify growth opportunities for marketing outreach"""
-    
     def __init__(self):
+        if not IG_USERNAME:
+            raise RuntimeError("IG_USERNAME not set in .env")
+
         self.loader = instaloader.Instaloader()
-        # Configure to avoid rate limiting
-        self.loader.context.request_timeout = 30
+        try:
+            self.loader.load_session_from_file(IG_USERNAME)
+            print(f"✅ Instagram session loaded for {IG_USERNAME}")
+        except FileNotFoundError:
+            raise RuntimeError(
+                f"Instagram session not found. Run: instaloader --login {IG_USERNAME}"
+            )
+
+
         
     def fetch_profile_data(self, username: str) -> Optional[Dict]:
         """

@@ -188,43 +188,10 @@ async def store_analysis_in_db(analysis: Dict):
 # API Endpoints
 @app.get("/", tags=["Info"])
 async def root():
-    """API root endpoint"""
-    return {
-        "service": "Instagram Profile Analyzer API",
-        "version": "2.0.0",
-        "framework": "FastAPI",
-        "database": "PostgreSQL",
-        "docs": "/docs",
-        "endpoints": {
-            "analyze": "POST /api/analyze",
-            "batch_analyze": "POST /api/batch-analyze",
-            "opportunities": "GET /api/opportunities",
-            "profile_history": "GET /api/profile/{username}/history",
-            "mark_contacted": "POST /api/profile/{username}/contact",
-            "health": "GET /api/health"
-        }
-    }
+    return "Autonomous Hacks 26"
 
 
-@app.get("/api/health", response_model=HealthResponse, tags=["Health"])
-async def health_check():
-    """Health check endpoint"""
-    db_connected = True
-    try:
-        # Test database connection
-        db.session.execute("SELECT 1")
-    except:
-        db_connected = False
-    
-    return HealthResponse(
-        status="healthy" if db_connected else "degraded",
-        timestamp=datetime.now().isoformat(),
-        database_connected=db_connected,
-        cache_size=len(analysis_cache)
-    )
-
-
-@app.post("/api/analyze", response_model=AnalysisResponse, tags=["Analysis"])
+@app.post("/analyze", response_model=AnalysisResponse, tags=["Analysis"])
 async def analyze_single_profile(request: AnalyzeRequest):
     """
     Analyze a single Instagram profile
@@ -246,7 +213,7 @@ async def analyze_single_profile(request: AnalyzeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/batch-analyze", response_model=BatchAnalysisResponse, tags=["Analysis"])
+@app.post("/batch-analyze", response_model=BatchAnalysisResponse, tags=["Analysis"])
 async def batch_analyze_profiles(request: BatchAnalyzeRequest):
     """
     Analyze multiple Instagram profiles in batch
@@ -294,40 +261,7 @@ async def batch_analyze_profiles(request: BatchAnalyzeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/opportunities", response_model=List[OpportunityResponse], tags=["Opportunities"])
-async def get_opportunities(
-    limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
-    min_score: float = Query(5.0, ge=0.0, le=10.0, description="Minimum opportunity score")
-):
-    """
-    Get top opportunities from database
-    
-    - **limit**: Maximum number of results (1-100)
-    - **min_score**: Minimum opportunity score (0-10)
-    """
-    try:
-        opportunities = db.get_top_opportunities(limit=limit, min_score=min_score)
-        
-        return [
-            OpportunityResponse(
-                id=opp.id,
-                username=opp.username,
-                opportunity_score=opp.opportunity_score,
-                growth_potential=opp.growth_potential,
-                engagement_rate=opp.engagement_rate,
-                followers=opp.followers,
-                issues=opp.issues,
-                contacted=opp.contacted,
-                analyzed_at=opp.analyzed_at.isoformat()
-            )
-            for opp in opportunities
-        ]
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/profile/{username}/history", tags=["Profile"])
+@app.get("/profile/{username}/history", tags=["Profile"])
 async def get_profile_history(
     username: str,
     limit: int = Query(10, ge=1, le=50, description="Number of historical records")
@@ -351,19 +285,18 @@ async def get_profile_history(
                 'followers': h.followers,
                 'engagement_rate': h.engagement_rate,
                 'opportunity_score': h.opportunity_score,
-                'growth_potential': h.growth_potential,
                 'analyzed_at': h.analyzed_at.isoformat()
             }
             for h in history
         ]
-        
+    
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/profile/{username}/contact", tags=["Lead Management"])
+@app.post("/profile/{username}/contact", tags=["Lead Management"])
 async def mark_profile_contacted(username: str, request: MarkContactedRequest):
     """
     Mark a profile as contacted
@@ -391,31 +324,6 @@ async def mark_profile_contacted(username: str, request: MarkContactedRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.delete("/api/cache/clear", tags=["Admin"])
-async def clear_cache():
-    """Clear the analysis cache"""
-    global analysis_cache
-    count = len(analysis_cache)
-    analysis_cache = {}
-    
-    return {
-        'success': True,
-        'message': f'Cleared {count} cached analyses',
-        'cleared_count': count
-    }
-
-
-@app.get("/api/cache/stats", tags=["Admin"])
-async def cache_stats():
-    """Get cache statistics"""
-    return {
-        'success': True,
-        'cached_profiles': len(analysis_cache),
-        'profiles': list(analysis_cache.keys()),
-        'total_size_mb': sum(len(str(v)) for v in analysis_cache.values()) / 1024 / 1024
-    }
 
 
 # Startup and Shutdown Events
