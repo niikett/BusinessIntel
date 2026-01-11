@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Instagram Analyzer CLI
 Simple command-line interface for the Instagram analyzer
